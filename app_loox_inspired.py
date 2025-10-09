@@ -382,7 +382,8 @@ def bookmarklet():
     Simplified bookmarklet - Extract ONLY productId and sellerId
     Like Loox does it!
     """
-    host = request.host_url.rstrip('/')
+    # Force HTTPS for production (avoid mixed content errors)
+    host = request.host_url.rstrip('/').replace('http://', 'https://')
     
     js = f"""
 (function() {{
