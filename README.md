@@ -1,6 +1,6 @@
-# ReviewKing - AI-Powered Review Importer
+# Sakura Reviews - AI-Powered Review Importer
 
-Better than Loox! Import high-quality reviews from AliExpress to Shopify with AI-powered filtering.
+🌸 Beautiful reviews, naturally. Import high-quality reviews from AliExpress to Shopify with AI-powered filtering - better than Loox!
 
 ## Features
 

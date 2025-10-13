@@ -471,13 +471,13 @@ def bookmarklet():
         
         overlay.innerHTML = `
             <div style="background: #0f0f23; padding: 30px; border-radius: 16px; max-width: 1000px; width: 95%; max-height: 95vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #00ff88; padding-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #FF69B4; padding-bottom: 15px;">
                     <div>
-                        <h2 style="color: #00ff88; margin: 0; font-size: 28px;">ReviewKing</h2>
-                        <p style="color: #888; margin: 5px 0 0 0; font-size: 14px;">Powered by AI • Better than Loox</p>
+                        <h2 style="color: #FF69B4; margin: 0; font-size: 28px;">🌸 Sakura Reviews</h2>
+                        <p style="color: #888; margin: 5px 0 0 0; font-size: 14px;">Beautiful reviews, naturally • Powered by AI</p>
                     </div>
                     <button onclick="this.closest('#reviewking-overlay').remove(); window.reviewKingActive=false;" 
-                            style="background: #ff4444; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; transition: all 0.3s;">
+                            style="background: #FF69B4; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; transition: all 0.3s;">
                         ✕ Close
                     </button>
                 </div>
@@ -575,23 +575,23 @@ def bookmarklet():
         }};
         
         content.innerHTML = `
-            <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d1b4e 100%); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <div style="background: linear-gradient(135deg, #FF69B4 0%, #FF1493 100%); padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(255,105,180,0.3);">
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                     <div style="text-align: center;">
-                        <div style="font-size: 32px; font-weight: bold; color: #00ff88;">${{stats.total}}</div>
-                        <div style="color: #aaa; font-size: 14px;">Total Loaded</div>
+                        <div style="font-size: 32px; font-weight: bold; color: white;">${{stats.total}}</div>
+                        <div style="color: #ffebf5; font-size: 14px;">Total Loaded</div>
                     </div>
                     <div style="text-align: center;">
-                        <div style="font-size: 32px; font-weight: bold; color: #00ff88;">${{stats.ai_recommended}}</div>
-                        <div style="color: #aaa; font-size: 14px;">AI Recommended</div>
+                        <div style="font-size: 32px; font-weight: bold; color: white;">${{stats.ai_recommended}}</div>
+                        <div style="color: #ffebf5; font-size: 14px;">AI Recommended</div>
                     </div>
                     <div style="text-align: center;">
-                        <div style="font-size: 32px; font-weight: bold; color: #00ff88;">${{stats.with_photos}}</div>
-                        <div style="color: #aaa; font-size: 14px;">With Photos</div>
+                        <div style="font-size: 32px; font-weight: bold; color: white;">${{stats.with_photos}}</div>
+                        <div style="color: #ffebf5; font-size: 14px;">With Photos</div>
                     </div>
                     <div style="text-align: center;">
-                        <div style="font-size: 32px; font-weight: bold; color: #00ff88;">${{stats.avg_quality.toFixed(1)}}/10</div>
-                        <div style="color: #aaa; font-size: 14px;">Avg Quality</div>
+                        <div style="font-size: 32px; font-weight: bold; color: white;">${{stats.avg_quality.toFixed(1)}}/10</div>
+                        <div style="color: #ffebf5; font-size: 14px;">Avg Quality</div>
                     </div>
                 </div>
             </div>
@@ -599,12 +599,12 @@ def bookmarklet():
             <div style="background: #1a1f35; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
                 <div style="color: #aaa; font-size: 13px; margin-bottom: 10px;">Filter Reviews:</div>
                 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-                    <button onclick="window.reviewKingSetFilter('all')" style="background: ${{currentFilter === 'all' ? '#00ff88' : '#2d3748'}}; color: ${{currentFilter === 'all' ? '#000' : '#fff'}}; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">All (${{stats.total}})</button>
-                    <button onclick="window.reviewKingSetFilter('photos')" style="background: ${{currentFilter === 'photos' ? '#00ff88' : '#2d3748'}}; color: ${{currentFilter === 'photos' ? '#000' : '#fff'}}; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">📷 With Photos (${{stats.with_photos}})</button>
-                    <button onclick="window.reviewKingSetFilter('ai_recommended')" style="background: ${{currentFilter === 'ai_recommended' ? '#00ff88' : '#2d3748'}}; color: ${{currentFilter === 'ai_recommended' ? '#000' : '#fff'}}; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">⭐ AI Recommended (${{stats.ai_recommended}})</button>
-                    <button onclick="window.reviewKingSetFilter('5stars')" style="background: ${{currentFilter === '5stars' ? '#00ff88' : '#2d3748'}}; color: ${{currentFilter === '5stars' ? '#000' : '#fff'}}; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">5 ⭐ Only</button>
-                    <button onclick="window.reviewKingSetFilter('4-5stars')" style="background: ${{currentFilter === '4-5stars' ? '#00ff88' : '#2d3748'}}; color: ${{currentFilter === '4-5stars' ? '#000' : '#fff'}}; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">4-5 ⭐</button>
-                    <button onclick="window.reviewKingSetFilter('3stars')" style="background: ${{currentFilter === '3stars' ? '#00ff88' : '#2d3748'}}; color: ${{currentFilter === '3stars' ? '#000' : '#fff'}}; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">3 ⭐ Only</button>
+                    <button onclick="window.reviewKingSetFilter('all')" style="background: ${{currentFilter === 'all' ? '#FF69B4' : '#2d3748'}}; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">All (${{stats.total}})</button>
+                    <button onclick="window.reviewKingSetFilter('photos')" style="background: ${{currentFilter === 'photos' ? '#FF69B4' : '#2d3748'}}; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">📷 With Photos (${{stats.with_photos}})</button>
+                    <button onclick="window.reviewKingSetFilter('ai_recommended')" style="background: ${{currentFilter === 'ai_recommended' ? '#FF69B4' : '#2d3748'}}; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">🌸 AI Recommended (${{stats.ai_recommended}})</button>
+                    <button onclick="window.reviewKingSetFilter('5stars')" style="background: ${{currentFilter === '5stars' ? '#FF69B4' : '#2d3748'}}; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">5 ⭐ Only</button>
+                    <button onclick="window.reviewKingSetFilter('4-5stars')" style="background: ${{currentFilter === '4-5stars' ? '#FF69B4' : '#2d3748'}}; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">4-5 ⭐</button>
+                    <button onclick="window.reviewKingSetFilter('3stars')" style="background: ${{currentFilter === '3stars' ? '#FF69B4' : '#2d3748'}}; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">3 ⭐ Only</button>
                 </div>
                 <div style="color: #888; font-size: 12px; margin-top: 10px;">Showing ${{filteredReviews.length}} of ${{stats.total}} reviews</div>
             </div>
@@ -616,7 +616,7 @@ def bookmarklet():
         const reviewsList = document.getElementById('reviews-list');
         filteredReviews.forEach((r, i) => {{
             const reviewDiv = document.createElement('div');
-            reviewDiv.style.cssText = 'background: linear-gradient(145deg, #1a1f35 0%, #16213e 100%); padding: 20px; margin-bottom: 15px; border-radius: 12px; border-left: 5px solid ' + (r.ai_recommended ? '#00ff88' : '#555') + '; box-shadow: 0 4px 15px rgba(0,0,0,0.3);';
+            reviewDiv.style.cssText = 'background: linear-gradient(145deg, #1a1f35 0%, #16213e 100%); padding: 20px; margin-bottom: 15px; border-radius: 12px; border-left: 5px solid ' + (r.ai_recommended ? '#FF69B4' : '#555') + '; box-shadow: 0 4px 15px rgba(0,0,0,0.3);';
             
             let stars = '★'.repeat(Math.ceil(r.rating / 20)) + '☆'.repeat(5 - Math.ceil(r.rating / 20));
             
@@ -672,15 +672,16 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     
     print("=" * 70)
-    print("REVIEWKING - LOOX-INSPIRED ARCHITECTURE")
+    print("🌸 SAKURA REVIEWS - Beautiful reviews, naturally")
     print("=" * 70)
     print(f"Port: {port}")
     print()
     print("FEATURES:")
-    print("  [+] Server-side scraping (PRIMARY)")
-    print("  [+] Loox fallback (STEALTH BACKUP)")
-    print("  [+] Simple bookmarklet (extract productId only)")
+    print("  [+] 100 reviews loaded at once")
+    print("  [+] Smart filters (Photos, AI, Star ratings)")
+    print("  [+] Server-side scraping (AliExpress API)")
     print("  [+] AI quality scoring")
+    print("  [+] Beautiful gradient UI")
     print("=" * 70)
     print()
     print("BOOKMARKLET:")
