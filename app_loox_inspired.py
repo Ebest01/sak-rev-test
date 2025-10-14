@@ -286,34 +286,78 @@ def scrape_via_loox_stealth(product_id, seller_id=None):
 @app.route('/', methods=['GET'])
 def homepage():
     """Simple homepage for the app"""
-    return """
+    # Get the host URL for the bookmarklet
+    host = request.host_url.rstrip('/').replace('http://', 'https://')
+    bookmarklet_code = f"javascript:(function(){{var s=document.createElement('script');s.src='{host}/bookmarklet.js';document.head.appendChild(s);}})();"
+    
+    return f"""
     <!DOCTYPE html>
     <html>
     <head>
         <title>🌸 Sakura Reviews</title>
         <style>
-            body { 
+            body {{ 
                 font-family: Arial, sans-serif; 
                 background: linear-gradient(135deg, #FFB6C1, #FFC0CB, #FFE4E1);
                 margin: 0; padding: 40px; text-align: center;
-            }
-            .container { 
+            }}
+            .container {{ 
                 background: white; 
                 border-radius: 20px; 
                 padding: 40px; 
                 box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-                max-width: 600px; margin: 0 auto;
-            }
-            h1 { color: #FF69B4; font-size: 2.5em; margin-bottom: 20px; }
-            .tagline { color: #666; font-size: 1.2em; margin-bottom: 30px; }
-            .features { text-align: left; margin: 30px 0; }
-            .feature { margin: 10px 0; color: #333; }
-            .bookmarklet { 
+                max-width: 700px; margin: 0 auto;
+            }}
+            h1 {{ color: #FF69B4; font-size: 2.5em; margin-bottom: 20px; }}
+            .tagline {{ color: #666; font-size: 1.2em; margin-bottom: 30px; }}
+            .features {{ text-align: left; margin: 30px 0; }}
+            .feature {{ margin: 10px 0; color: #333; }}
+            .bookmarklet-btn {{ 
                 background: #FF69B4; color: white; 
                 padding: 15px 30px; border-radius: 25px; 
-                text-decoration: none; display: inline-block;
-                margin: 20px 0; font-weight: bold;
-            }
+                border: none; cursor: pointer;
+                margin: 20px 0; font-weight: bold; font-size: 16px;
+            }}
+            .bookmarklet-btn:hover {{ background: #FF1493; }}
+            .instructions {{ 
+                display: none; 
+                background: #FFF0F5; 
+                border: 2px dashed #FF69B4; 
+                border-radius: 10px; 
+                padding: 20px; 
+                margin: 20px 0; 
+                text-align: left;
+            }}
+            .instructions.show {{ display: block; }}
+            .code-box {{ 
+                background: #FFE4E1; 
+                border: 1px solid #FF69B4; 
+                border-radius: 5px; 
+                padding: 15px; 
+                margin: 15px 0; 
+                font-family: monospace; 
+                font-size: 12px;
+                word-break: break-all;
+                cursor: pointer;
+                position: relative;
+            }}
+            .copy-btn {{ 
+                background: #FF69B4; 
+                color: white; 
+                border: none; 
+                padding: 8px 15px; 
+                border-radius: 5px; 
+                cursor: pointer; 
+                margin-top: 10px;
+            }}
+            .copy-btn:hover {{ background: #FF1493; }}
+            .step {{ 
+                background: #FFF; 
+                border-left: 4px solid #FF69B4; 
+                padding: 10px; 
+                margin: 10px 0; 
+            }}
+            .success {{ color: #4CAF50; font-weight: bold; display: none; }}
         </style>
     </head>
     <body>
@@ -334,10 +378,66 @@ def homepage():
             <p>2. Use the bookmarklet to import reviews</p>
             <p>3. Import to your Shopify store</p>
             
-            <a href="#" class="bookmarklet" onclick="alert('Copy the bookmarklet from your terminal!'); return false;">
+            <button class="bookmarklet-btn" onclick="toggleInstructions()">
                 📖 Get Bookmarklet
-            </a>
+            </button>
+            
+            <div class="instructions" id="instructions">
+                <h3 style="color: #FF69B4; margin-top: 0;">📚 Installation Instructions</h3>
+                
+                <div class="step">
+                    <strong>Step 1:</strong> Copy the bookmarklet code below
+                </div>
+                
+                <div class="code-box" onclick="copyCode()" title="Click to copy">
+                    {bookmarklet_code}
+                </div>
+                
+                <button class="copy-btn" onclick="copyCode()">📋 Copy Bookmarklet</button>
+                <span class="success" id="copySuccess">✅ Copied!</span>
+                
+                <div class="step">
+                    <strong>Step 2:</strong> Create a new bookmark in your browser
+                    <ul>
+                        <li><strong>Chrome/Edge:</strong> Press Ctrl+D (or Cmd+D on Mac)</li>
+                        <li><strong>Firefox:</strong> Press Ctrl+D (or Cmd+D on Mac)</li>
+                        <li><strong>Safari:</strong> Press Cmd+D</li>
+                    </ul>
+                </div>
+                
+                <div class="step">
+                    <strong>Step 3:</strong> Name it "Sakura Reviews" and paste the code as the URL
+                </div>
+                
+                <div class="step">
+                    <strong>Step 4:</strong> Go to any AliExpress product page and click your new bookmark!
+                </div>
+                
+                <p style="text-align: center; color: #666; margin-top: 20px;">
+                    💡 <em>The bookmarklet will only work on AliExpress product pages</em>
+                </p>
+            </div>
         </div>
+        
+        <script>
+            function toggleInstructions() {{
+                const instructions = document.getElementById('instructions');
+                instructions.classList.toggle('show');
+            }}
+            
+            function copyCode() {{
+                const code = '{bookmarklet_code.replace("'", "\\'")}';
+                navigator.clipboard.writeText(code).then(() => {{
+                    const success = document.getElementById('copySuccess');
+                    success.style.display = 'inline';
+                    setTimeout(() => {{
+                        success.style.display = 'none';
+                    }}, 2000);
+                }}).catch(err => {{
+                    alert('Failed to copy. Please select and copy manually.');
+                }});
+            }}
+        </script>
     </body>
     </html>
     """
