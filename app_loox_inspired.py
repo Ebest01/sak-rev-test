@@ -283,6 +283,65 @@ def scrape_via_loox_stealth(product_id, seller_id=None):
         logger.error(f"Loox fallback error: {e}")
         return None
 
+@app.route('/', methods=['GET'])
+def homepage():
+    """Simple homepage for the app"""
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>🌸 Sakura Reviews</title>
+        <style>
+            body { 
+                font-family: Arial, sans-serif; 
+                background: linear-gradient(135deg, #FFB6C1, #FFC0CB, #FFE4E1);
+                margin: 0; padding: 40px; text-align: center;
+            }
+            .container { 
+                background: white; 
+                border-radius: 20px; 
+                padding: 40px; 
+                box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+                max-width: 600px; margin: 0 auto;
+            }
+            h1 { color: #FF69B4; font-size: 2.5em; margin-bottom: 20px; }
+            .tagline { color: #666; font-size: 1.2em; margin-bottom: 30px; }
+            .features { text-align: left; margin: 30px 0; }
+            .feature { margin: 10px 0; color: #333; }
+            .bookmarklet { 
+                background: #FF69B4; color: white; 
+                padding: 15px 30px; border-radius: 25px; 
+                text-decoration: none; display: inline-block;
+                margin: 20px 0; font-weight: bold;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🌸 Sakura Reviews</h1>
+            <p class="tagline">Beautiful reviews, naturally • Powered by AI</p>
+            
+            <div class="features">
+                <div class="feature">✅ 100 reviews loaded at once</div>
+                <div class="feature">✅ Smart filters (Photos, AI, Star ratings)</div>
+                <div class="feature">✅ Server-side scraping (AliExpress API)</div>
+                <div class="feature">✅ AI quality scoring</div>
+                <div class="feature">✅ Beautiful gradient UI</div>
+            </div>
+            
+            <p><strong>How to use:</strong></p>
+            <p>1. Go to any AliExpress product page</p>
+            <p>2. Use the bookmarklet to import reviews</p>
+            <p>3. Import to your Shopify store</p>
+            
+            <a href="#" class="bookmarklet" onclick="alert('Copy the bookmarklet from your terminal!'); return false;">
+                📖 Get Bookmarklet
+            </a>
+        </div>
+    </body>
+    </html>
+    """
+
 @app.route('/api/scrape', methods=['GET'])
 def scrape_reviews():
     """
