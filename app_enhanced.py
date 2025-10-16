@@ -1622,14 +1622,23 @@ def bookmarklet():
             const countryCodes = [...new Set(this.allReviews.map(r => r.country).filter(c => c))];
             const countryMap = this.getCountryMap();
             
-            // Convert codes to objects with display info
+            // Count reviews per country
+            const countryReviewCounts = {{}};
+            this.allReviews.forEach(r => {{
+                if (r.country) {{
+                    countryReviewCounts[r.country] = (countryReviewCounts[r.country] || 0) + 1;
+                }}
+            }});
+            
+            // Convert codes to objects with display info and count
             return countryCodes
                 .map(code => ({{
                     code: code,
                     flag: countryMap[code]?.flag || '🌍',
-                    name: countryMap[code]?.name || code
+                    name: countryMap[code]?.name || code,
+                    count: countryReviewCounts[code] || 0
                 }}))
-                .sort((a, b) => a.name.localeCompare(b.name));
+                .sort((a, b) => b.count - a.count); // Sort by count (most reviews first)
         }}
         
         displayReview() {{
@@ -1790,8 +1799,8 @@ def bookmarklet():
                         <label style="color: #9ca3af; font-size: 13px; margin-bottom: 6px; display: block; font-weight: 500;">🌍 Reviews from</label>
                         <select id="rk-country-filter" onchange="window.reviewKingClient.setCountry(this.value)" 
                                 style="width: 100%; padding: 10px 12px; background: #0f0f23; color: white; border: 1px solid #2d2d3d; border-radius: 8px; font-size: 14px; cursor: pointer;">
-                            <option value="all">All countries</option>
-                            ${{this.getUniqueCountries().map(c => `<option value="${{c.code}}" ${{this.selectedCountry === c.code ? 'selected' : ''}}>${{c.flag}} ${{c.name}}</option>`).join('')}}
+                            <option value="all">🌍 All countries (${{this.allReviews.length}})</option>
+                            ${{this.getUniqueCountries().map(c => `<option value="${{c.code}}" ${{this.selectedCountry === c.code ? 'selected' : ''}}>${{c.flag}} ${{c.name}} (${{c.count}})</option>`).join('')}}
                         </select>
                     </div>
                     <div>
