@@ -1210,11 +1210,33 @@ def bookmarklet():
         }}
         
         init() {{
-            // Check if we're in modal mode
-            const isModal = this.isModalMode();
+            // Check if we're in modal mode (SSR/immersive pages)
+            const isModalPage = this.isModalPage();
             
-            if (isModal) {{
-                // In modal mode - listen for product clicks
+            if (isModalPage) {{
+                // Check if a modal is currently open
+                const isModalOpen = this.isModalOpen();
+                
+                if (isModalOpen) {{
+                    // Modal is open - try to detect product from modal
+                    console.log('[MODAL MODE] Modal is open, detecting product...');
+                    const productId = this.detectProductFromModal();
+                    
+                    if (productId) {{
+                        // Found product in open modal - load reviews immediately!
+                        console.log('[MODAL MODE] Found product in modal:', productId);
+                        this.productData = {{
+                            platform: 'aliexpress',
+                            productId: productId,
+                            url: window.location.href
+                        }};
+                        this.createOverlay();
+                        this.loadReviews();
+                        return;
+                    }}
+                }}
+                
+                // Modal not open yet - set up listener
                 this.setupModalListener();
                 alert('🌸 Sakura Reviews: Modal Mode Activated!\\n\\nClick any product to import its reviews.\\n\\nLoox can\\'t do this! 🔥');
                 return;
@@ -1229,6 +1251,38 @@ def bookmarklet():
             }}
             this.createOverlay();
             this.loadReviews();
+        }}
+        
+        isModalPage() {{
+            // Check if we're on a modal/immersive page (not a regular product page)
+            const url = window.location.href;
+            return url.includes('_immersiveMode=true') || 
+                   url.includes('disableNav=YES') ||
+                   url.includes('/ssr/');
+        }}
+        
+        isModalOpen() {{
+            // Check if the AliExpress modal is currently visible
+            return document.querySelector('.comet-v2-modal-wrap, .mini--container--') !== null;
+        }}
+        
+        detectProductFromModal() {{
+            // Try to find product ID from the currently open modal
+            // Look for the modal content and extract product ID
+            const modal = document.querySelector('.comet-v2-modal-wrap, .mini--container--');
+            if (!modal) return null;
+            
+            // Try to find product ID in the modal's URL or data attributes
+            // The product ID might be in a data attribute or in the modal structure
+            const productElements = modal.querySelectorAll('[id]');
+            for (const el of productElements) {{
+                if (el.id && /^\\d{{10,}}$/.test(el.id)) {{
+                    console.log('[MODAL MODE] Found product ID in modal:', el.id);
+                    return el.id;
+                }}
+            }}
+            
+            return null;
         }}
         
         isModalMode() {{
@@ -1389,7 +1443,7 @@ def bookmarklet():
                                 Beautiful reviews, naturally • Powered by AI
                             </p>
                         </div>
-                        <button id="reviewking-close" onclick="window.reviewKingClient.close()">✕ Close</button>
+                        <button id="reviewking-close">✕ Close</button>
                     </div>
                     <div id="reviewking-content">
                         <div style="text-align: center; padding: 40px;">
@@ -1403,6 +1457,14 @@ def bookmarklet():
             `;
             document.body.appendChild(div);
             document.body.style.overflow = 'hidden';
+            
+            // Attach close button event listener
+            const closeBtn = document.getElementById('reviewking-close');
+            if (closeBtn) {{
+                closeBtn.addEventListener('click', () => {{
+                    this.close();
+                }});
+            }}
         }}
         
         setupProductSearch() {{
@@ -2183,7 +2245,7 @@ def bookmarklet():
                     <h3 style="color: #ef4444; margin: 0 0 8px;">Error</h3>
                     <p style="color: #6b7280; margin: 0;">${{message}}</p>
                     <button class="rk-btn rk-btn-primary" style="margin-top: 20px;"
-                            onclick="window.reviewKingClient.close()">Close</button>
+                            onclick="if(window.reviewKingClient) window.reviewKingClient.close()">Close</button>
                 </div>
             `;
         }}
