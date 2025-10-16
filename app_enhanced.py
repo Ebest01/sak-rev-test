@@ -1182,7 +1182,9 @@ def get_analytics():
 @app.route('/js/bookmarklet.js')
 def bookmarklet():
     """Enhanced bookmarklet with superior UX"""
-    host = request.host_url.rstrip('/')
+    # Use the correct protocol (HTTPS in production, HTTP in development)
+    proto = request.headers.get('X-Forwarded-Proto', 'https' if request.is_secure else 'http')
+    host = f"{proto}://{request.host}"
     
     js_content = f"""
 // ReviewKing Enhanced Bookmarklet - Superior to Loox
