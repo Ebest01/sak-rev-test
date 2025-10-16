@@ -1642,9 +1642,51 @@ def bookmarklet():
             
             console.log('Displaying review...', {{ hasReviews: !!this.reviews, reviewCount: this.reviews?.length }});
             
-            // Check if reviews are loaded
-            if (!this.reviews || this.reviews.length === 0) {{
+            // Check if reviews are loaded initially
+            if (!this.allReviews || this.allReviews.length === 0) {{
                 content.innerHTML = '<div style="text-align: center; padding: 40px;">Loading reviews...</div>';
+                return;
+            }}
+            
+            // Check if no reviews match the current filters
+            if (!this.reviews || this.reviews.length === 0) {{
+                const countryMap = this.getCountryMap();
+                const selectedCountryName = this.selectedCountry !== 'all' 
+                    ? (countryMap[this.selectedCountry]?.name || this.selectedCountry)
+                    : null;
+                
+                content.innerHTML = `
+                    <div style="text-align: center; padding: 60px 40px; background: #fef3c7; border-radius: 16px; 
+                                border: 2px dashed #f59e0b;">
+                        <div style="font-size: 64px; margin-bottom: 20px;">😕</div>
+                        <h3 style="color: #92400e; margin: 0 0 12px; font-size: 22px;">No Reviews Match Your Filters</h3>
+                        <p style="color: #b45309; margin: 0 0 24px; font-size: 15px; line-height: 1.6;">
+                            ${{selectedCountryName 
+                                ? `No reviews found from <strong>${{selectedCountryName}}</strong> with your selected filters.`
+                                : 'No reviews match your current filter criteria.'
+                            }}
+                        </p>
+                        <div style="background: white; padding: 20px; border-radius: 8px; margin: 0 auto; max-width: 400px; text-align: left;">
+                            <p style="color: #666; font-size: 14px; margin: 0 0 16px; font-weight: 600;">💡 Try this:</p>
+                            <ul style="color: #666; font-size: 14px; margin: 0; padding-left: 20px; line-height: 2;">
+                                ${{selectedCountryName 
+                                    ? `<li>Select a different country from the dropdown</li>
+                                       <li>Or choose "All Countries" to see all reviews</li>`
+                                    : `<li>Try selecting "All" in the star rating filter</li>
+                                       <li>Remove the "Photos Only" filter if applied</li>`
+                                }}
+                                <li>Check if reviews were successfully loaded (see stats above)</li>
+                            </ul>
+                        </div>
+                        <button class="rk-btn-secondary" 
+                                onclick="window.reviewKingClient.setFilter('all'); window.reviewKingClient.setCountry('all');"
+                                style="margin-top: 20px; padding: 12px 24px; background: #FF2D85; color: white; 
+                                       border: none; border-radius: 8px; font-size: 14px; font-weight: 600; 
+                                       cursor: pointer; box-shadow: 0 2px 8px rgba(255,45,133,0.3);">
+                            🔄 Reset All Filters
+                        </button>
+                    </div>
+                `;
                 return;
             }}
             
