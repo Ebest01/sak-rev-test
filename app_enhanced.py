@@ -1205,16 +1205,76 @@ def bookmarklet():
             this.currentFilter = 'all';  // Current filter
             this.selectedCountry = 'all';  // Country filter
             this.showTranslations = true;  // Translation toggle (default ON)
+            this.modalProductId = null;  // Store product ID clicked in modal
             this.init();
         }}
         
         init() {{
+            // Check if we're in modal mode
+            const isModal = this.isModalMode();
+            
+            if (isModal) {{
+                // In modal mode - listen for product clicks
+                this.setupModalListener();
+                alert('🌸 Sakura Reviews: Modal Mode Activated!\\n\\nClick any product to import its reviews.\\n\\nLoox can\\'t do this! 🔥');
+                return;
+            }}
+            
+            // Normal mode - detect product from URL
             this.productData = this.detectProduct();
             if (!this.productData.productId) {{
-                alert('Could not detect product on this page. Please open a product page.');
+                alert('Could not detect product on this page. Please open a product page or use modal mode.');
                 window.reviewKingActive = false;
                 return;
             }}
+            this.createOverlay();
+            this.loadReviews();
+        }}
+        
+        isModalMode() {{
+            const url = window.location.href;
+            return url.includes('_immersiveMode=true') || 
+                   url.includes('disableNav=YES') ||
+                   url.includes('/ssr/') ||
+                   document.querySelector('.comet-v2-modal-wrap, .mini--container--') !== null;
+        }}
+        
+        setupModalListener() {{
+            console.log('[MODAL MODE] Setting up product click listener...');
+            
+            // Listen for clicks on product containers
+            document.addEventListener('click', (e) => {{
+                // Find the clicked product container
+                const productContainer = e.target.closest('.productContainer, [class*="product_"]');
+                
+                if (productContainer && productContainer.id && /^\\d+$/.test(productContainer.id)) {{
+                    this.modalProductId = productContainer.id;
+                    console.log('[MODAL MODE] Product clicked:', this.modalProductId);
+                    
+                    // Wait a moment for modal to load, then activate
+                    setTimeout(() => {{
+                        this.activateFromModal();
+                    }}, 500);
+                }}
+            }}, true);  // Use capture phase to catch early
+        }}
+        
+        activateFromModal() {{
+            if (!this.modalProductId) {{
+                console.log('[MODAL MODE] No product ID stored');
+                return;
+            }}
+            
+            console.log('[MODAL MODE] Activating with product ID:', this.modalProductId);
+            
+            // Set product data
+            this.productData = {{
+                platform: 'aliexpress',
+                productId: this.modalProductId,
+                url: window.location.href
+            }};
+            
+            // Create overlay and load reviews
             this.createOverlay();
             this.loadReviews();
         }}
