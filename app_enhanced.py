@@ -125,7 +125,8 @@ class EnhancedReviewExtractor:
             # Calculate AI scores for all reviews
             for review in reviews:
                 review['quality_score'] = self._calculate_quality_score(review)
-                review['ai_recommended'] = review['quality_score'] >= 8
+                # AI recommends only high-quality AND positive reviews (4+ stars = rating >= 80)
+                review['ai_recommended'] = (review['quality_score'] >= 8 and review.get('rating', 0) >= 80)
                 review['sentiment_score'] = self._calculate_sentiment(review.get('text', ''))
             
             # Sort by quality score (competitive advantage!)
