@@ -829,12 +829,12 @@ def index():
         'version': Config.API_VERSION,
         'status': 'operational',
         'competitive_advantages': [
-            '🌍 Multi-platform (AliExpress, Amazon, eBay, Walmart)',
-            '🤖 AI Quality Scoring (0-10 scale)',
-            '⚡ Bulk import capabilities',
-            '📸 Smart photo filtering',
-            '💰 Better pricing than Loox',
-            '🎯 Sentiment analysis'
+            '&#127760; Multi-platform (AliExpress, Amazon, eBay, Walmart)',
+            '&#10004; AI Quality Scoring (0-10 scale)',
+            '&#9889; Bulk import capabilities',
+            '&#128247; Smart photo filtering',
+            '$ Better pricing than Loox',
+            '&#10004; Sentiment analysis'
         ],
         'platforms_supported': Config.PLATFORMS,
         'pricing': Config.PRICING,
@@ -1207,14 +1207,12 @@ def bookmarklet():
     js_content = f"""
 // ReviewKing Enhanced Bookmarklet - Superior to Loox
 (function() {{
-    // Better initialization check: look for actual overlay, not just flag
+    // Check if overlay already exists
     const existingOverlay = document.getElementById('reviewking-overlay');
-    if (existingOverlay || (window.reviewKingActive && window.reviewKingClient)) {{
+    if (existingOverlay) {{
         console.log('[REVIEWKING] Already active, skipping...');
         return;
     }}
-    
-    window.reviewKingActive = true;
     
     const API_URL = '{host}';
     
@@ -1240,43 +1238,37 @@ def bookmarklet():
         }}
         
         init() {{
-            // Check if we're in modal mode (SSR/immersive pages)
+            // Check if we're on SSR/modal page
             const isModalPage = this.isModalPage();
             
             if (isModalPage) {{
-                // Check if a modal is currently open
-                const isModalOpen = this.isModalOpen();
-                
-                if (isModalOpen) {{
-                    // Modal is open - try to detect product from modal
-                    console.log('[MODAL MODE] Modal is open, detecting product...');
-                    const productId = this.detectProductFromModal();
-                    
-                    if (productId) {{
-                        // Found product in open modal - load reviews immediately!
-                        console.log('[MODAL MODE] Found product in modal:', productId);
-                        this.productData = {{
-                            platform: 'aliexpress',
-                            productId: productId,
-                            url: window.location.href
-                        }};
-                        this.createOverlay();
-                        this.loadReviews();
-                        return;
-                    }}
-                }}
-                
-                // Modal not open yet - set up listener
+                // SSR page - setup click listener
                 this.setupModalListener();
-                alert('🌸 Sakura Reviews: Modal Mode Activated!\\n\\nClick any product to import its reviews.\\n\\nLoox can\\'t do this! 🔥');
+                
+                // Check if user already clicked a product
+                const productId = this.detectProductFromModal();
+                
+                if (productId) {{
+                    // Found product ID - load reviews!
+                    console.log('[SSR MODE] Found product ID:', productId);
+                    this.productData = {{
+                        platform: 'aliexpress',
+                        productId: productId,
+                        url: window.location.href
+                    }};
+                    this.createOverlay();
+                    this.loadReviews();
+                }} else {{
+                    // No product selected yet - tell user to click a product
+                    alert('🌸 Sakura Reviews\\n\\nPlease click on a product first, then click this bookmarklet again.');
+                }}
                 return;
             }}
             
-            // Normal mode - detect product from URL
+            // Normal product page - detect product from URL
             this.productData = this.detectProduct();
             if (!this.productData.productId) {{
-                alert('Could not detect product on this page. Please open a product page or use modal mode.');
-                window.reviewKingActive = false;
+                alert('Could not detect product on this page. Please open a product page.');
                 return;
             }}
             this.createOverlay();
@@ -1298,43 +1290,17 @@ def bookmarklet():
                    url.includes('/ssr/');
         }}
         
-        isModalOpen() {{
-            // Check if the AliExpress modal is currently visible (not just exists in DOM)
-            const modal = document.querySelector('.comet-v2-modal-wrap, .mini--container--');
-            if (!modal) return false;
-            
-            // Check if modal is actually visible (not display:none or visibility:hidden)
-            const style = window.getComputedStyle(modal);
-            const isVisible = style.display !== 'none' && 
-                            style.visibility !== 'hidden' && 
-                            style.opacity !== '0';
-            
-            console.log('[MODAL MODE] Modal element exists:', !!modal, 'Is visible:', isVisible);
-            return isVisible;
-        }}
-        
         detectProductFromModal() {{
             console.log('[MODAL MODE] Detecting product from currently open modal...');
             
-            // Check if we have a stored product ID from the click event
-            if (this.modalProductId) {{
-                console.log('[MODAL MODE] ✅ Using stored product ID from click:', this.modalProductId);
-                
-                // Verify modal is open with reviews loaded
-                const modal = document.querySelector('.comet-v2-modal-wrap, .mini--container--');
-                if (modal) {{
-                    const reviewSection = modal.querySelector('#nav-review, .review--wrap--U5X0TgT');
-                    if (reviewSection) {{
-                        console.log('[MODAL MODE] ✅ Review section confirmed in modal');
-                        return this.modalProductId;
-                    }} else {{
-                        console.log('[MODAL MODE] ⚠️ Modal open but reviews not loaded yet');
-                        return null;
-                    }}
-                }}
+            // Simple approach: Check hidden input field that stores the clicked product ID
+            const hiddenInput = document.getElementById('sakura-reviews-product-id');
+            if (hiddenInput && hiddenInput.value) {{
+                console.log('[MODAL MODE] ✅ Found product ID in hidden field:', hiddenInput.value);
+                return hiddenInput.value;
             }}
             
-            console.log('[MODAL MODE] ❌ No product ID stored from click');
+            console.log('[MODAL MODE] ❌ No product ID found in hidden field');
             return null;
         }}
         
@@ -1353,13 +1319,19 @@ def bookmarklet():
                 if (productElement && productElement.id) {{
                     const productId = productElement.id;
                     if (/^1005\\d{{9,}}$/.test(productId)) {{
-                        this.modalProductId = productId;
                         console.log('[MODAL MODE] ✅ Product clicked:', productId);
                         
-                        // Wait a moment for modal to load, then activate
-                        setTimeout(() => {{
-                            this.activateFromModal();
-                        }}, 500);
+                        // Store product ID in hidden input field (simple and reliable!)
+                        let hiddenInput = document.getElementById('sakura-reviews-product-id');
+                        if (!hiddenInput) {{
+                            hiddenInput = document.createElement('input');
+                            hiddenInput.type = 'hidden';
+                            hiddenInput.id = 'sakura-reviews-product-id';
+                            document.body.appendChild(hiddenInput);
+                        }}
+                        hiddenInput.value = productId;
+                        
+                        console.log('[MODAL MODE] 💾 Saved product ID to hidden field:', productId);
                     }}
                 }}
             }};
@@ -1369,26 +1341,6 @@ def bookmarklet():
             document.body.addEventListener('click', this.modalClickHandler);
             
             console.log('[MODAL MODE] Listening for product clicks on entire page');
-        }}
-        
-        activateFromModal() {{
-            if (!this.modalProductId) {{
-                console.log('[MODAL MODE] No product ID stored');
-                return;
-            }}
-            
-            console.log('[MODAL MODE] Activating with product ID:', this.modalProductId);
-            
-            // Set product data
-            this.productData = {{
-                platform: 'aliexpress',
-                productId: this.modalProductId,
-                url: window.location.href
-            }};
-            
-            // Create overlay and load reviews
-            this.createOverlay();
-            this.loadReviews();
         }}
         
         detectProduct() {{
@@ -2007,10 +1959,10 @@ def bookmarklet():
                     <div style="color: #9ca3af; font-size: 13px; margin-bottom: 10px; font-weight: 500;">Filter Reviews:</div>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
                         <button class="rk-btn rk-btn-secondary" style="padding: 10px 16px; ${{this.currentFilter === 'all' ? 'background: #FF2D85; color: white; border: none;' : ''}}" onclick="window.reviewKingClient.setFilter('all')">All (${{this.allReviews.length}})</button>
-                        <button class="rk-btn rk-btn-secondary" style="padding: 10px 16px; ${{this.currentFilter === 'photos' ? 'background: #FF2D85; color: white; border: none;' : ''}}" onclick="window.reviewKingClient.setFilter('photos')">📸 With Photos (${{this.stats.with_photos}})</button>
-                        <button class="rk-btn rk-btn-secondary" style="padding: 10px 16px; ${{this.currentFilter === 'ai_recommended' ? 'background: #FF2D85; color: white; border: none;' : ''}}" onclick="window.reviewKingClient.setFilter('ai_recommended')">🤖 AI Recommended (${{this.stats.ai_recommended}})</button>
-                        <button class="rk-btn rk-btn-secondary" style="padding: 10px 16px; ${{this.currentFilter === '4-5stars' ? 'background: #FF2D85; color: white; border: none;' : ''}}" onclick="window.reviewKingClient.setFilter('4-5stars')">4-5 ⭐</button>
-                        <button class="rk-btn rk-btn-secondary" style="padding: 10px 16px; ${{this.currentFilter === '3stars' ? 'background: #FF2D85; color: white; border: none;' : ''}}" onclick="window.reviewKingClient.setFilter('3stars')">3 ⭐ Only</button>
+                        <button class="rk-btn rk-btn-secondary" style="padding: 10px 16px; ${{this.currentFilter === 'photos' ? 'background: #FF2D85; color: white; border: none;' : ''}}" onclick="window.reviewKingClient.setFilter('photos')">&#128247; With Photos (${{this.stats.with_photos}})</button>
+                        <button class="rk-btn rk-btn-secondary" style="padding: 10px 16px; ${{this.currentFilter === 'ai_recommended' ? 'background: #FF2D85; color: white; border: none;' : ''}}" onclick="window.reviewKingClient.setFilter('ai_recommended')">&#10004; AI Recommended (${{this.stats.ai_recommended}})</button>
+                        <button class="rk-btn rk-btn-secondary" style="padding: 10px 16px; ${{this.currentFilter === '4-5stars' ? 'background: #FF2D85; color: white; border: none;' : ''}}" onclick="window.reviewKingClient.setFilter('4-5stars')">4-5 &#9733;</button>
+                        <button class="rk-btn rk-btn-secondary" style="padding: 10px 16px; ${{this.currentFilter === '3stars' ? 'background: #FF2D85; color: white; border: none;' : ''}}" onclick="window.reviewKingClient.setFilter('3stars')">3 &#9733; Only</button>
                     </div>
                     <div style="color: #6b7280; font-size: 12px;">
                         Showing ${{this.currentIndex + 1}} of ${{this.reviews.length}} reviews
@@ -2026,7 +1978,7 @@ def bookmarklet():
                             <div style="color: #9ca3af; font-size: 12px; font-weight: 500;">${{review.date}} • ${{review.country}}</div>
                         </div>
                         <div style="text-align: right; display: flex; flex-direction: column; gap: 8px; align-items: flex-end;">
-                            ${{isRecommended ? '<span style="background: #10b981; color: white; padding: 6px 12px; border-radius: 16px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; display: inline-block;">🤖 AI RECOMMENDED</span>' : ''}}
+                            ${{isRecommended ? '<span style="background: #10b981; color: white; padding: 6px 12px; border-radius: 16px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; display: inline-block;">&#10004; AI RECOMMENDED</span>' : ''}}
                             <span style="background: #3b82f6; color: white; padding: 6px 12px; border-radius: 16px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; display: inline-block;">QUALITY: ${{review.quality_score}}/10</span>
                         </div>
                     </div>
