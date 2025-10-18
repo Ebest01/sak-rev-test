@@ -23,6 +23,16 @@ from urllib.parse import urlparse, unquote, parse_qs
 import hashlib
 import uuid
 
+# Import remote config loader
+try:
+    from config_loader import config as remote_config
+    logger = logging.getLogger(__name__)
+    logger.info("📡 Remote config loader initialized")
+except ImportError:
+    remote_config = None
+    logger = logging.getLogger(__name__)
+    logger.warning("⚠️ Config loader not available, using environment variables only")
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -38,16 +48,18 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'reviewking-secret-' + str(uuid.uuid4()))
     API_VERSION = '2.0.0'
     
-    # Shopify API Configuration (use environment variables)
-    SHOPIFY_API_KEY = os.environ.get('SHOPIFY_API_KEY', '')
-    SHOPIFY_API_SECRET = os.environ.get('SHOPIFY_API_SECRET', '')
-    SHOPIFY_ACCESS_TOKEN = os.environ.get('SHOPIFY_ACCESS_TOKEN', '')
-    SHOPIFY_SHOP_DOMAIN = os.environ.get('SHOPIFY_SHOP_DOMAIN', '')
-    SHOPIFY_API_VERSION = '2025-10'  # Updated to match your app settings
+    # Shopify API Configuration (priority: env vars > remote config)
+    # NOTE: No hardcoded defaults for security - must be set via environment or config.json
+    SHOPIFY_API_KEY = os.environ.get('SHOPIFY_API_KEY') or (remote_config.get('shopify.api_key') if remote_config else None)
+    SHOPIFY_API_SECRET = os.environ.get('SHOPIFY_API_SECRET') or (remote_config.get('shopify.api_secret') if remote_config else None)
+    SHOPIFY_ACCESS_TOKEN = os.environ.get('SHOPIFY_ACCESS_TOKEN') or (remote_config.get('shopify.access_token') if remote_config else None)
+    SHOPIFY_SHOP_DOMAIN = os.environ.get('SHOPIFY_SHOP_DOMAIN') or (remote_config.get('shopify.shop_domain') if remote_config else None)
+    SHOPIFY_API_VERSION = os.environ.get('SHOPIFY_API_VERSION') or (remote_config.get('shopify.api_version') if remote_config else '2025-10')
     
     # App URLs (from your Shopify app configuration)
-    SHOPIFY_APP_URL = os.environ.get('SHOPIFY_APP_URL', '')
-    SHOPIFY_REDIRECT_URI = os.environ.get('SHOPIFY_REDIRECT_URI', '')
+    # NOTE: Should be set via environment or config.json
+    SHOPIFY_APP_URL = os.environ.get('SHOPIFY_APP_URL') or (remote_config.get('shopify.app_url') if remote_config else None)
+    SHOPIFY_REDIRECT_URI = os.environ.get('SHOPIFY_REDIRECT_URI') or (remote_config.get('shopify.redirect_uri') if remote_config else None)
     
     # Loox stealth fallback configuration (Plan B)
     LOOX_FALLBACK_ID = "b3Zk9ExHgf.eca2133e2efc041236106236b783f6b4"
@@ -652,15 +664,20 @@ class ShopifyAPIHelper:
         self.access_token = Config.SHOPIFY_ACCESS_TOKEN
         self.api_version = Config.SHOPIFY_API_VERSION
         
+        # Debug logging
+        logger.info(f"ShopifyAPIHelper init - Domain: {self.shop_domain}, Token: {self.access_token[:20] if self.access_token else 'None'}...")
+        
         if self.shop_domain and self.access_token:
             self.base_url = f"https://{self.shop_domain}/admin/api/{self.api_version}"
             self.headers = {
                 'X-Shopify-Access-Token': self.access_token,
                 'Content-Type': 'application/json'
             }
+            logger.info(f"✅ Shopify API configured: {self.base_url}")
         else:
             self.base_url = None
             self.headers = None
+            logger.warning(f"❌ Shopify API NOT configured - Domain: {bool(self.shop_domain)}, Token: {bool(self.access_token)}")
     
     def is_configured(self):
         """Check if Shopify API is configured"""
@@ -1190,13 +1207,22 @@ def bookmarklet():
     js_content = f"""
 // ReviewKing Enhanced Bookmarklet - Superior to Loox
 (function() {{
-    if (window.reviewKingActive) return;
+    // Better initialization check: look for actual overlay, not just flag
+    const existingOverlay = document.getElementById('reviewking-overlay');
+    if (existingOverlay || (window.reviewKingActive && window.reviewKingClient)) {{
+        console.log('[REVIEWKING] Already active, skipping...');
+        return;
+    }}
+    
     window.reviewKingActive = true;
     
     const API_URL = '{host}';
     
     class ReviewKingClient {{
         constructor() {{
+            // Assign to window FIRST so onclick handlers can reference it
+            window.reviewKingClient = this;
+            
             this.sessionId = Math.random().toString(36).substr(2, 9);
             this.selectedProduct = null;
             this.searchTimeout = null;
@@ -1206,6 +1232,10 @@ def bookmarklet():
             this.selectedCountry = 'all';  // Country filter
             this.showTranslations = true;  // Translation toggle (default ON)
             this.modalProductId = null;  // Store product ID clicked in modal
+            this.modalClickHandler = null;  // Store event handler for cleanup
+            this.currentIndex = 0;  // Initialize current review index
+            this.pagination = {{ has_next: false, page: 1 }};  // Initialize pagination
+            this.stats = {{ with_photos: 0, ai_recommended: 0 }};  // Initialize stats
             this.init();
         }}
         
@@ -1256,61 +1286,89 @@ def bookmarklet():
         isModalPage() {{
             // Check if we're on a modal/immersive page (not a regular product page)
             const url = window.location.href;
+            
+            // If it's a direct product page (/item/xxxxx.html), it's NOT modal mode
+            if (url.includes('/item/') && /\d{{13,}}\.html/.test(url)) {{
+                return false;
+            }}
+            
+            // Otherwise, check for modal/SSR page indicators
             return url.includes('_immersiveMode=true') || 
                    url.includes('disableNav=YES') ||
                    url.includes('/ssr/');
         }}
         
         isModalOpen() {{
-            // Check if the AliExpress modal is currently visible
-            return document.querySelector('.comet-v2-modal-wrap, .mini--container--') !== null;
+            // Check if the AliExpress modal is currently visible (not just exists in DOM)
+            const modal = document.querySelector('.comet-v2-modal-wrap, .mini--container--');
+            if (!modal) return false;
+            
+            // Check if modal is actually visible (not display:none or visibility:hidden)
+            const style = window.getComputedStyle(modal);
+            const isVisible = style.display !== 'none' && 
+                            style.visibility !== 'hidden' && 
+                            style.opacity !== '0';
+            
+            console.log('[MODAL MODE] Modal element exists:', !!modal, 'Is visible:', isVisible);
+            return isVisible;
         }}
         
         detectProductFromModal() {{
-            // Try to find product ID from the currently open modal
-            // Look for the modal content and extract product ID
-            const modal = document.querySelector('.comet-v2-modal-wrap, .mini--container--');
-            if (!modal) return null;
+            console.log('[MODAL MODE] Detecting product from currently open modal...');
             
-            // Try to find product ID in the modal's URL or data attributes
-            // The product ID might be in a data attribute or in the modal structure
-            const productElements = modal.querySelectorAll('[id]');
-            for (const el of productElements) {{
-                if (el.id && /^\\d{{10,}}$/.test(el.id)) {{
-                    console.log('[MODAL MODE] Found product ID in modal:', el.id);
-                    return el.id;
+            // Check if we have a stored product ID from the click event
+            if (this.modalProductId) {{
+                console.log('[MODAL MODE] ✅ Using stored product ID from click:', this.modalProductId);
+                
+                // Verify modal is open with reviews loaded
+                const modal = document.querySelector('.comet-v2-modal-wrap, .mini--container--');
+                if (modal) {{
+                    const reviewSection = modal.querySelector('#nav-review, .review--wrap--U5X0TgT');
+                    if (reviewSection) {{
+                        console.log('[MODAL MODE] ✅ Review section confirmed in modal');
+                        return this.modalProductId;
+                    }} else {{
+                        console.log('[MODAL MODE] ⚠️ Modal open but reviews not loaded yet');
+                        return null;
+                    }}
                 }}
             }}
             
+            console.log('[MODAL MODE] ❌ No product ID stored from click');
             return null;
         }}
         
-        isModalMode() {{
-            const url = window.location.href;
-            return url.includes('_immersiveMode=true') || 
-                   url.includes('disableNav=YES') ||
-                   url.includes('/ssr/') ||
-                   document.querySelector('.comet-v2-modal-wrap, .mini--container--') !== null;
-        }}
         
         setupModalListener() {{
             console.log('[MODAL MODE] Setting up product click listener...');
             
-            // Listen for clicks on product containers
-            document.addEventListener('click', (e) => {{
-                // Find the clicked product container
-                const productContainer = e.target.closest('.productContainer, [class*="product_"]');
-                
-                if (productContainer && productContainer.id && /^\\d+$/.test(productContainer.id)) {{
-                    this.modalProductId = productContainer.id;
-                    console.log('[MODAL MODE] Product clicked:', this.modalProductId);
-                    
-                    // Wait a moment for modal to load, then activate
-                    setTimeout(() => {{
-                        this.activateFromModal();
-                    }}, 500);
+            // Remove existing listener if it exists to prevent duplicates
+            if (this.modalClickHandler) {{
+                document.body.removeEventListener('click', this.modalClickHandler);
+            }}
+            
+            // Create and store the handler
+            this.modalClickHandler = (event) => {{
+                const productElement = event.target.closest('.productContainer');
+                if (productElement && productElement.id) {{
+                    const productId = productElement.id;
+                    if (/^1005\\d{{9,}}$/.test(productId)) {{
+                        this.modalProductId = productId;
+                        console.log('[MODAL MODE] ✅ Product clicked:', productId);
+                        
+                        // Wait a moment for modal to load, then activate
+                        setTimeout(() => {{
+                            this.activateFromModal();
+                        }}, 500);
+                    }}
                 }}
-            }}, true);  // Use capture phase to catch early
+            }};
+            
+            // Listen on document.body for ALL clicks, then check if clicked inside a productContainer
+            // This handles clicks on children/grandchildren elements correctly!
+            document.body.addEventListener('click', this.modalClickHandler);
+            
+            console.log('[MODAL MODE] Listening for product clicks on entire page');
         }}
         
         activateFromModal() {{
@@ -1361,6 +1419,13 @@ def bookmarklet():
         }}
         
         createOverlay() {{
+            // Remove any existing overlay first to prevent duplicates
+            const existingOverlay = document.getElementById('reviewking-overlay');
+            if (existingOverlay) {{
+                console.log('[REVIEWKING] Removing existing overlay to prevent duplicates');
+                existingOverlay.remove();
+            }}
+            
             const div = document.createElement('div');
             div.id = 'reviewking-overlay';
             div.innerHTML = `
@@ -2251,14 +2316,46 @@ def bookmarklet():
         }}
         
         close() {{
-            document.getElementById('reviewking-overlay').remove();
+            console.log('[REVIEWKING] Closing and cleaning up...');
+            
+            // Remove overlay if it exists
+            const overlay = document.getElementById('reviewking-overlay');
+            if (overlay) {{
+                overlay.remove();
+            }}
+            
+            // Clean up modal click handler if it exists
+            if (this.modalClickHandler) {{
+                document.body.removeEventListener('click', this.modalClickHandler);
+                this.modalClickHandler = null;
+                console.log('[REVIEWKING] Removed modal click handler');
+            }}
+            
+            // Restore body scroll
             document.body.style.overflow = 'auto';
+            
+            // Reset global state
             window.reviewKingActive = false;
             delete window.reviewKingClient;
+            
+            console.log('[REVIEWKING] Cleanup complete');
         }}
     }}
     
-    window.reviewKingClient = new ReviewKingClient();
+    // Wrap initialization in try-catch for error handling
+    // Note: window.reviewKingClient is assigned inside the constructor before init() runs
+    try {{
+        new ReviewKingClient();
+    }} catch (error) {{
+        console.error('[REVIEWKING] Initialization error:', error);
+        window.reviewKingActive = false;
+        delete window.reviewKingClient;  // Clean up if it was partially assigned
+        alert('ReviewKing initialization failed: ' + error.message);
+        
+        // Clean up any partially created overlay
+        const overlay = document.getElementById('reviewking-overlay');
+        if (overlay) overlay.remove();
+    }}
 }})();
     """
     
