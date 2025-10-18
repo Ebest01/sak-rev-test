@@ -46,6 +46,10 @@ desktop.ini
 .env
 .env.local
 
+# Configuration files with secrets
+config.json
+shopify_config.py
+
 # Backups and old files
 *_MILESTONE_*.py
 app_enhanced.py
