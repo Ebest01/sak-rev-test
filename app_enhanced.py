@@ -180,10 +180,10 @@ class EnhancedReviewExtractor:
             all_reviews = []
             reviews_per_api_page = 20  # AliExpress API limit
             
-            # Calculate how many API pages we need to fetch
-            num_pages_needed = (per_page + reviews_per_api_page - 1) // reviews_per_api_page
+            # Calculate how many API pages we need to fetch (fetch extra to account for duplicates)
+            num_pages_needed = ((per_page * 2) + reviews_per_api_page - 1) // reviews_per_api_page
             
-            logger.info(f"Fetching {per_page} reviews from AliExpress API (making {num_pages_needed} requests)")
+            logger.info(f"Fetching {per_page} reviews from AliExpress API (making {num_pages_needed} requests to account for duplicates)")
             
             # AliExpress's official feedback API endpoint (PROVEN TO WORK!)
             api_url = "https://feedback.aliexpress.com/pc/searchEvaluation.do"
@@ -225,8 +225,19 @@ class EnhancedReviewExtractor:
                     break
             
             if all_reviews:
-                logger.info(f"🎉 Successfully fetched {len(all_reviews)} REAL reviews total!")
-                return all_reviews
+                # Remove duplicates based on evaluationId (most reliable)
+                unique_reviews = []
+                seen_evaluation_ids = set()
+                
+                for review in all_reviews:
+                    # Use evaluationId as the unique identifier (most reliable)
+                    evaluation_id = review.get('id') or review.get('evaluationId')
+                    if evaluation_id and evaluation_id not in seen_evaluation_ids:
+                        seen_evaluation_ids.add(evaluation_id)
+                        unique_reviews.append(review)
+                
+                logger.info(f"🎉 Successfully fetched {len(all_reviews)} reviews, {len(unique_reviews)} unique after deduplication!")
+                return unique_reviews
             else:
                 logger.warning("No reviews from API, trying fallback methods...")
                 return self._try_fallbacks(product_id, per_page)
@@ -826,7 +837,7 @@ def index():
     """Beautiful Sakura Reviews welcome page"""
     # Get the host URL for the bookmarklet
     host = request.host_url.rstrip('/')
-    bookmarklet_code = f"javascript:(function(){{var s=document.createElement('script');s.src='{host}/js/bookmarklet.js';document.head.appendChild(s);}})();"
+    bookmarklet_code = f"javascript:(function(){{var s=document.createElement('script');s.src='{host}/js/bookmarklet.js?v='+Date.now();document.head.appendChild(s);}})();"
     bookmarklet_code_escaped = bookmarklet_code.replace("'", "\\'")
     
     return f"""
@@ -1361,7 +1372,7 @@ def import_url():
         product_id = request.args.get('productId')
         page = int(request.args.get('page', 1))
         platform = request.args.get('platform', 'aliexpress')
-        per_page = int(request.args.get('per_page', 100))  # Load 100 reviews like the old version
+        per_page = int(request.args.get('per_page', 150))  # Load 150 reviews to account for duplicates
         
         # Filters
         filters = {
@@ -1699,6 +1710,7 @@ def bookmarklet():
     host = f"{proto}://{request.host}"
     
     js_content = f"""
+// [SSR MODE] INIT v" + Date.now() + "
 // ReviewKing Enhanced Bookmarklet - Superior to Loox
 (function() {{
     // Check if overlay already exists
@@ -1736,26 +1748,8 @@ def bookmarklet():
             const isModalPage = this.isModalPage();
             
             if (isModalPage) {{
-                // SSR page - setup click listener
+                // SSR page - setup modal detection and user guidance
                 this.setupModalListener();
-                
-                // Check if user already clicked a product
-                const productId = this.detectProductFromModal();
-                
-                if (productId) {{
-                    // Found product ID - load reviews!
-                    console.log('[SSR MODE] Found product ID:', productId);
-                    this.productData = {{
-                        platform: 'aliexpress',
-                        productId: productId,
-                        url: window.location.href
-                    }};
-                    this.createOverlay();
-                    this.loadReviews();
-                }} else {{
-                    // No product selected yet - tell user to click a product
-                    alert('🌸 Sakura Reviews\\n\\nPlease click on a product first, then click this bookmarklet again.');
-                }}
                 return;
             }}
             
@@ -1800,41 +1794,178 @@ def bookmarklet():
         
         
         setupModalListener() {{
-            console.log('[MODAL MODE] Setting up product click listener...');
+            console.log('[SSR MODE] Setting up Sakura Reviews for AliExpress SSR page...');
             
-            // Remove existing listener if it exists to prevent duplicates
+            // Check if AliExpress modal is currently open
+            const modalMask = document.querySelector('.comet-v2-modal-mask.comet-v2-fade-appear-done.comet-v2-fade-enter-done');
+            const modalWrap = document.querySelector('.comet-v2-modal-wrap');
+            
+            if (modalMask || modalWrap) {{
+                console.log('[SSR MODE] ✅ AliExpress modal is open - activating Sakura Reviews');
+                
+                // Show activation message
+                alert('🌸 Sakura Reviews is now activated!\\n\\nClick on any product to add the "Get Reviews Now" button.');
+                
+                // Close the modal after user clicks OK
+                setTimeout(() => {{
+                    const closeButton = document.querySelector('button[aria-label="Close"].comet-v2-modal-close');
+                    if (closeButton) {{
+                        closeButton.click();
+                    }}
+                }}, 100);
+                
+                // Setup click listener for products
+                this.setupProductClickListener();
+                
+            }} else {{
+                console.log('[SSR MODE] ❌ No AliExpress modal found');
+                alert('🌸 Sakura Reviews\\n\\nPlease click on any product first, then click this bookmarklet again.');
+            }}
+        }}
+        
+        setupProductClickListener() {{
+            console.log('[SSR MODE] Setting up product click listener...');
+            
+            // Remove existing listener if it exists
             if (this.modalClickHandler) {{
-                document.body.removeEventListener('click', this.modalClickHandler);
+                document.body.removeEventListener('click', this.modalClickHandler, true);
             }}
             
-            // Create and store the handler
+            // Listen for clicks on products
             this.modalClickHandler = (event) => {{
                 const productElement = event.target.closest('.productContainer');
-                if (productElement && productElement.id) {{
+                
+                if (productElement && productElement.id && /^1005\\d{{9,}}$/.test(productElement.id)) {{
                     const productId = productElement.id;
-                    if (/^1005\\d{{9,}}$/.test(productId)) {{
-                        console.log('[MODAL MODE] ✅ Product clicked:', productId);
-                        
-                        // Store product ID in hidden input field (simple and reliable!)
-                        let hiddenInput = document.getElementById('sakura-reviews-product-id');
-                        if (!hiddenInput) {{
-                            hiddenInput = document.createElement('input');
-                            hiddenInput.type = 'hidden';
-                            hiddenInput.id = 'sakura-reviews-product-id';
-                            document.body.appendChild(hiddenInput);
-                        }}
-                        hiddenInput.value = productId;
-                        
-                        console.log('[MODAL MODE] 💾 Saved product ID to hidden field:', productId);
-                    }}
+                    console.log('[SSR MODE] ✅ Product clicked:', productId);
+                    
+                    // Store product ID and add "Get Reviews Now" button to the NEW modal
+                    this.addSakuraButton(productId);
                 }}
             }};
             
-            // Listen on document.body for ALL clicks, then check if clicked inside a productContainer
-            // This handles clicks on children/grandchildren elements correctly!
-            document.body.addEventListener('click', this.modalClickHandler);
+            // Attach listener to body with capture phase (runs on EVERY click)
+            document.body.addEventListener('click', this.modalClickHandler, true);
+            console.log('[SSR MODE] ✅ Product click listener attached - will trigger on every product click');
+        }}
+        
+        
+        addSakuraButton(productId) {{
+            console.log('[SSR MODE] Adding Sakura button for product:', productId);
             
-            console.log('[MODAL MODE] Listening for product clicks on entire page');
+            // Store the product ID for later use
+            this.currentProductId = productId;
+            
+            // Try multiple times to add the button as the modal loads
+            const tryAddButton = (attempt = 1) => {{
+                const navReview = document.querySelector('#nav-review');
+                if (navReview) {{
+                    console.log(`[SSR MODE] ✅ Found #nav-review (attempt ${{attempt}})`);
+                    
+                    // Remove any existing Sakura button
+                    const existingButton = navReview.querySelector('.sakura-reviews-btn');
+                    if (existingButton) {{
+                        existingButton.remove();
+                    }}
+                    
+                    // Create the button
+                    const btn = this.createSakuraButtonElement(productId);
+                    navReview.insertBefore(btn, navReview.firstChild);
+                    console.log('[SSR MODE] ✅ Sakura button added successfully');
+                }} else if (attempt < 3) {{
+                    console.log(`[SSR MODE] ⏳ #nav-review not found, retry ${{attempt + 1}}/3...`);
+                    setTimeout(() => tryAddButton(attempt + 1), 500);
+                }} else {{
+                    console.log('[SSR MODE] ❌ #nav-review not found after 3 attempts');
+                }}
+            }};
+            
+            // Start trying after 600ms (AliExpress modal animation)
+            setTimeout(() => tryAddButton(), 600);
+        }}
+        
+        createSakuraButtonElement(productId) {{
+            const btn = document.createElement('button');
+            btn.className = 'sakura-reviews-btn';
+            btn.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 285.75 285.75" style="flex-shrink: 0;">
+                        <g transform="matrix(2.022 0 0 2.022 13.745 -293.54)">
+                            <g transform="translate(6.3237 14.723)" fill="#fbc1ea">
+                                <path d="m47.885 146.2c-0.2975 4e-3 -0.5912 0.11045-0.87966 0.33699-5.9498 4.6713-11.203 14.597-9.9297 22.903 2.8966 18.896 14.067 26.707 20.463 26.707 6.3959 0 17.566-7.8114 20.463-26.707 1.2732-8.3058-3.98-18.232-9.9297-22.903-3.0769-2.4158-6.6808 8.9461-10.533 8.9461-3.4911 0-6.7777-9.3315-9.6535-9.2831z"/>
+                                <path d="m109.16 176.88c-0.0961-0.28158-0.28774-0.52813-0.59233-0.73247-6.2812-4.2151-17.345-6.1439-24.85-2.3663-17.076 8.5939-21.053 21.631-19.076 27.714 1.9764 6.0828 12.857 14.293 31.723 11.208 8.2927-1.3557 16.109-9.4191 18.714-16.521 1.3467-3.6728-10.573-3.5894-11.763-7.2531-1.0788-3.3203 6.7804-9.3296 5.8456-12.05z"/>
+                                <path d="m99.014 244.43c0.2381-0.17845 0.41337-0.43686 0.51358-0.78969 2.0678-7.2763 0.48339-18.394-5.4287-24.365-13.45-13.584-27.078-13.338-32.253-9.5786-5.1743 3.7594-9.62 16.645-0.85683 33.634 3.852 7.4679 13.936 12.41 21.495 12.692 3.9092 0.14579 0.14652-11.164 3.2631-13.429 2.8244-2.052 10.968 3.5655 13.266 1.836z"/>
+                                <path d="m31.684 255.78c0.24329 0.1713 0.54322 0.25813 0.90974 0.24442 7.5592-0.28196 17.643-5.2244 21.495-12.692 8.7632-16.989 4.3175-29.875-0.85683-33.634-5.1743-3.7594-18.803-4.0057-32.253 9.5786-5.9121 5.9712-7.4965 17.089-5.4287 24.365 1.0694 3.7629 10.663-3.3106 13.78-1.0463 2.8244 2.052-0.0016 11.533 2.3534 13.184z"/>
+                                <path d="m-0.044487 195.24c-0.087736 0.28432-0.077638 0.5964 0.048675 0.94074 2.6041 7.1021 10.421 15.165 18.714 16.521 18.866 3.0843 29.747-5.1256 31.723-11.208 1.9764-6.0828-2.0008-19.12-19.076-27.714-7.5058-3.7775-18.569-1.8487-24.85 2.3663-3.2483 2.1798 6.4438 9.1184 5.2533 12.782-1.0788 3.3203-10.969 3.5624-11.812 6.3124z"/>
+                            </g>
+                            <g transform="matrix(.33942 0 0 -.33942 44.333 286.73)" fill="#ee379a">
+                                <path d="m48.763 148.47c-0.27045 4e-3 -0.53745 0.10041-0.79969 0.30635-5.4089 4.2466-10.185 13.27-9.027 20.821 2.6332 17.178 12.788 24.279 18.603 24.279 5.8144 0 15.969-7.1012 18.603-24.279 1.1575-7.5507-3.6182-16.574-9.027-20.821-2.7972-2.1961-6.0735 8.1328-9.5756 8.1328-3.1738 0-6.1616-8.4832-8.7759-8.4392z"/>
+                                <path d="m107.39 178.31c-0.0874-0.25598-0.26158-0.48012-0.53848-0.66588-5.7102-3.8319-15.768-5.5854-22.591-2.1512-15.523 7.8126-19.139 19.665-17.342 25.195 1.7968 5.5298 11.688 12.993 28.839 10.189 7.5388-1.2325 14.645-8.5628 17.012-15.019 1.2242-3.3389-9.6116-3.263-10.694-6.5937-0.98074-3.0184 6.164-8.4814 5.3142-10.954z"/>
+                                <path d="m97.122 243.28c0.21645-0.16223 0.37579-0.39715 0.46689-0.7179 1.8798-6.6148 0.43945-16.722-4.9352-22.15-12.227-12.349-24.617-12.125-29.321-8.7078-4.704 3.4176-8.7455 15.132-0.77894 30.577 3.5018 6.789 12.669 11.282 19.541 11.538 3.5538 0.13254 0.1332-10.15 2.9664-12.208 2.5676-1.8655 9.9711 3.2414 12.06 1.6691z"/>
+                                <path d="m32.156 253.6c0.22118 0.15573 0.49384 0.23467 0.82704 0.2222 6.872-0.25632 16.039-4.7495 19.541-11.538 7.9665-15.445 3.925-27.159-0.77894-30.577-4.704-3.4176-17.093-3.6415-29.321 8.7078-5.3746 5.4283-6.815 15.536-4.9352 22.15 0.97214 3.4208 9.6939-3.0097 12.527-0.95122 2.5676 1.8655-0.0015 10.485 2.1394 11.986z"/>
+                                <path d="m2.2688 195c-0.07976 0.25847-0.07058 0.54218 0.04425 0.85522 2.3673 6.4564 9.4735 13.787 17.012 15.019 17.151 2.8039 27.043-4.6596 28.839-10.189 1.7968-5.5298-1.8189-17.382-17.342-25.195-6.8235-3.4341-16.881-1.6807-22.591 2.1512-2.953 1.9817 5.858 8.2894 4.7758 11.62-0.98075 3.0184-9.9721 3.2385-10.738 5.7385z"/>
+                            </g>
+                        </g>
+                    </svg>
+                    <span>Get Reviews</span>
+                </div>
+            `;
+            btn.style.cssText = `
+                background: white;
+                color: #8B4A8B;
+                border: 3px solid #ff69b4;
+                padding: 12px 24px;
+                border-radius: 12px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                margin: 16px 0;
+                display: block;
+                width: 100%;
+                transition: all 0.2s;
+                box-shadow: 0 2px 8px rgba(255, 105, 180, 0.2);
+                position: relative;
+                overflow: visible;
+            `;
+            
+            // Add hover effects
+            btn.addEventListener('mouseenter', () => {{
+                btn.style.background = '#ff69b4';
+                btn.style.color = 'white';
+                btn.style.transform = 'translateY(-1px)';
+                btn.style.boxShadow = '0 4px 12px rgba(255, 105, 180, 0.4)';
+                btn.style.borderColor = '#ff1493';
+            }});
+            
+            btn.addEventListener('mouseleave', () => {{
+                btn.style.background = 'white';
+                btn.style.color = '#8B4A8B';
+                btn.style.transform = 'translateY(0)';
+                btn.style.boxShadow = '0 2px 8px rgba(255, 105, 180, 0.2)';
+                btn.style.borderColor = '#ff69b4';
+            }});
+            
+            // Add click handler
+            btn.addEventListener('click', () => {{
+                this.handleProductClick(productId);
+            }});
+            
+            return btn;
+        }}
+        
+        handleProductClick(productId) {{
+            console.log('[SSR MODE] Processing product click:', productId);
+            
+            // Store the product data
+            this.productData = {{
+                platform: 'aliexpress',
+                productId: productId,
+                url: window.location.href
+            }};
+            
+            // Create overlay and load reviews
+            this.createOverlay();
+            this.loadReviews();
         }}
         
         detectProduct() {{
@@ -1967,7 +2098,6 @@ def bookmarklet():
                 </div>
             `;
             document.body.appendChild(div);
-            document.body.style.overflow = 'hidden';
             
             // Attach close button event listener
             const closeBtn = document.getElementById('reviewking-close');
@@ -2127,7 +2257,7 @@ def bookmarklet():
                     productId: this.productData.productId,
                     platform: this.productData.platform,
                     page: page,
-                    per_page: 100,  // Load 100 reviews at once like the old version
+                    per_page: 150,  // Load 150 reviews to account for duplicates
                     id: this.sessionId
                 }});
                 
@@ -2454,7 +2584,7 @@ def bookmarklet():
                     <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
                         <button class="rk-btn rk-btn-secondary" style="padding: 10px 16px; ${{this.currentFilter === 'all' ? 'background: #FF2D85; color: white; border: none;' : ''}}" onclick="window.reviewKingClient.setFilter('all')">All (${{this.allReviews.length}})</button>
                         <button class="rk-btn rk-btn-secondary" style="padding: 10px 16px; ${{this.currentFilter === 'photos' ? 'background: #FF2D85; color: white; border: none;' : ''}}" onclick="window.reviewKingClient.setFilter('photos')">&#128247; With Photos (${{this.stats.with_photos}})</button>
-                        <button class="rk-btn rk-btn-secondary" style="padding: 10px 16px; ${{this.currentFilter === 'ai_recommended' ? 'background: #FF2D85; color: white; border: none;' : ''}}" onclick="window.reviewKingClient.setFilter('ai_recommended')">&#10004; AI Recommended (${{this.stats.ai_recommended}})</button>
+                        <button class="rk-btn rk-btn-secondary" style="padding: 10px 16px; ${{this.currentFilter === 'ai_recommended' ? 'background: #FF2D85; color: white; border: none;' : ''}}" onclick="window.reviewKingClient.setFilter('ai_recommended')"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff69b4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 6px;"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path><path d="M20 3v4"></path><path d="M22 5h-4"></path><path d="M4 17v2"></path><path d="M5 18H3"></path></svg> AI Recommended (${{this.stats.ai_recommended}})</button>
                         <button class="rk-btn rk-btn-secondary" style="padding: 10px 16px; ${{this.currentFilter === '4-5stars' ? 'background: #FF2D85; color: white; border: none;' : ''}}" onclick="window.reviewKingClient.setFilter('4-5stars')">4-5 &#9733;</button>
                         <button class="rk-btn rk-btn-secondary" style="padding: 10px 16px; ${{this.currentFilter === '3stars' ? 'background: #FF2D85; color: white; border: none;' : ''}}" onclick="window.reviewKingClient.setFilter('3stars')">3 &#9733; Only</button>
                     </div>
@@ -2777,14 +2907,7 @@ def bookmarklet():
                 console.log('[REVIEWKING] Removed modal click handler');
             }}
             
-            // Restore body scroll
-            document.body.style.overflow = 'auto';
-            
-            // Reset global state
-            window.reviewKingActive = false;
-            delete window.reviewKingClient;
-            
-            console.log('[REVIEWKING] Cleanup complete');
+            // Cleanup complete - no need to restore body scroll or reset global state
         }}
     }}
     
@@ -2805,7 +2928,67 @@ def bookmarklet():
 }})();
     """
     
-    return js_content, 200, {'Content-Type': 'application/javascript'}
+    return js_content, 200, {
+        'Content-Type': 'application/javascript',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+    }
+
+@app.route('/__rk_version')
+def rk_version():
+    try:
+        # Generate current bookmarklet body and check for SSR marker
+        js_body, _, _ = bookmarklet()
+        has_ssr = ('[SSR MODE]' in js_body)
+        info = {
+            'pid': os.getpid(),
+            'cwd': os.getcwd(),
+            'file': __file__,
+            'file_mtime': datetime.fromtimestamp(os.path.getmtime(__file__)).isoformat(),
+            'bookmarklet_has_ssr': has_ssr,
+            'ts': int(time.time()),
+        }
+        return jsonify(info)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Backward-compatible alias
+@app.route('/rk_version')
+def rk_version_alias():
+    return rk_version()
+
+# Alternate path to defeat any stubborn caches/CDNs
+@app.route('/js/bookmarklet.v2.js')
+def bookmarklet_v2():
+    return bookmarklet()
+
+# Explicit duplicate test endpoint to bypass any client/proxy caching logic
+@app.route('/js/bookmarklet-test.js')
+def bookmarklet_test():
+    proto = request.headers.get('X-Forwarded-Proto', 'https' if request.is_secure else 'http')
+    host = f"{proto}://{request.host}"
+    js_content = f"""
+// ReviewKing Bookmarklet TEST endpoint
+(function() {{
+    console.log('[REVIEWKING][TEST] Bookmarklet test endpoint loaded');
+    const API_URL = '{host}';
+    // Inline import of main logic by reusing same class/body from primary endpoint
+    {bookmarklet.__code__.co_consts[3] if False else ''}
+}})();
+"""
+    # For reliability, rebuild by calling the primary to get its JS, then prefix test marker
+    try:
+        primary_js, _, _ = bookmarklet()
+        js_content = "console.log('[REVIEWKING][TEST] using primary body');\n" + primary_js
+    except Exception:
+        pass
+    return js_content, 200, {
+        'Content-Type': 'application/javascript',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+    }
 
 @app.route('/health')
 def health():
