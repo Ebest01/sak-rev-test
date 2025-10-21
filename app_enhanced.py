@@ -3560,7 +3560,7 @@ def shopify_auto_inject():
     
     // Configuration
     const SAKURA_CONFIG = {
-        apiUrl: 'http://localhost:5000',
+        apiUrl: '{{ Config.WIDGET_BASE_URL }}',
         shopId: '{{ shop.permanent_domain }}',
         productId: '{{ product.id }}',
         theme: 'default',
@@ -3887,7 +3887,7 @@ def sakura_reviews_js():
     
     // Configuration
     const SAKURA_CONFIG = {
-        apiUrl: 'http://localhost:5000',
+        apiUrl: '{{ Config.WIDGET_BASE_URL }}',
         shopId: window.Shopify?.shop || 'demo-shop',
         productId: window.ShopifyAnalytics?.meta?.product?.id || null,
         theme: 'default',
