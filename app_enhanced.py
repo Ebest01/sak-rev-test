@@ -1771,7 +1771,7 @@ def bookmarklet():
             const url = window.location.href;
             
             // If it's a direct product page (/item/xxxxx.html), it's NOT modal mode
-            if (url.includes('/item/') && /\d{{13,}}\.html/.test(url)) {{
+            if (url.includes('/item/') && /\\d{{13,}}\\.html/.test(url)) {{
                 return false;
             }}
             
@@ -1838,7 +1838,7 @@ def bookmarklet():
             this.modalClickHandler = (event) => {{
                 const productElement = event.target.closest('.productContainer');
                 
-                if (productElement && productElement.id && /^1005\\d{{9,}}$/.test(productElement.id)) {{
+                if (productElement && productElement.id && /^1005\\\\d{{9,}}$/.test(productElement.id)) {{
                     const productId = productElement.id;
                     console.log('[SSR MODE] ✅ Product clicked:', productId);
                     
@@ -1979,7 +1979,7 @@ def bookmarklet():
             
             if (hostname.includes('aliexpress')) {{
                 platform = 'aliexpress';
-                const match = url.match(/\\/item\\/(\\d+)/);
+                const match = url.match(/\\/item\\/(\\\\d+)/);
                 if (match) productId = match[1];
             }} else if (hostname.includes('amazon')) {{
                 platform = 'amazon';
@@ -1987,11 +1987,11 @@ def bookmarklet():
                 if (match) productId = match[1];
             }} else if (hostname.includes('ebay')) {{
                 platform = 'ebay';
-                const match = url.match(/\\/itm\\/(\\d+)/);
+                const match = url.match(/\\/itm\\/(\\\\d+)/);
                 if (match) productId = match[1];
             }} else if (hostname.includes('walmart')) {{
                 platform = 'walmart';
-                const match = url.match(/\\/ip\\/[^\\/]+\\/(\\d+)/);
+                const match = url.match(/\\/ip\\/[^\\/]+\\/(\\\\d+)/);
                 if (match) productId = match[1];
             }}
             
