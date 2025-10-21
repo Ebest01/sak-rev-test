@@ -4152,10 +4152,17 @@ if __name__ == '__main__':
     print(f"javascript:(function(){{var s=document.createElement('script');s.src='http://localhost:{port}/js/bookmarklet.js';document.head.appendChild(s);}})();")
     print("=" * 60)
     
-    # Use SSL if available (ad-hoc SSL for local testing)
-    try:
-        app.run(host='0.0.0.0', port=port, debug=debug, ssl_context='adhoc')
-    except Exception as e:
-        print(f"\n⚠️  SSL not available (install pyOpenSSL): {e}")
-        print("Running without SSL...")
+    # Use SSL only for local development (EasyPanel handles SSL at proxy level)
+    use_ssl = os.environ.get('USE_SSL', 'false').lower() == 'true'
+    
+    if use_ssl:
+        try:
+            print("Starting with SSL (local development mode)...")
+            app.run(host='0.0.0.0', port=port, debug=debug, ssl_context='adhoc')
+        except Exception as e:
+            print(f"\n⚠️  SSL not available: {e}")
+            print("Running without SSL...")
+            app.run(host='0.0.0.0', port=port, debug=debug)
+    else:
+        print("Starting without SSL (production mode)...")
         app.run(host='0.0.0.0', port=port, debug=debug)
