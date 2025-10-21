@@ -4147,4 +4147,10 @@ if __name__ == '__main__':
     print(f"javascript:(function(){{var s=document.createElement('script');s.src='http://localhost:{port}/js/bookmarklet.js';document.head.appendChild(s);}})();")
     print("=" * 60)
     
-    app.run(host='0.0.0.0', port=port, debug=debug)
+    # Use SSL if available (ad-hoc SSL for local testing)
+    try:
+        app.run(host='0.0.0.0', port=port, debug=debug, ssl_context='adhoc')
+    except Exception as e:
+        print(f"\n⚠️  SSL not available (install pyOpenSSL): {e}")
+        print("Running without SSL...")
+        app.run(host='0.0.0.0', port=port, debug=debug)
