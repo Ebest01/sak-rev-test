@@ -3879,7 +3879,7 @@ def sakura_reviews_js():
     The JavaScript file that gets injected via ScriptTag API
     This is the file that Loox-style apps inject automatically
     """
-    return f"""
+    js_code = """
 // Sakura Reviews Auto-Injection Script
 // This gets injected automatically via Shopify ScriptTag API
 (function() {
@@ -3887,7 +3887,7 @@ def sakura_reviews_js():
     
     // Configuration
     const SAKURA_CONFIG = {
-        apiUrl: '{Config.WIDGET_BASE_URL}',
+        apiUrl: '__WIDGET_BASE_URL__',
         shopId: window.Shopify?.shop || 'demo-shop',
         productId: window.ShopifyAnalytics?.meta?.product?.id || null,
         theme: 'default',
@@ -4052,7 +4052,12 @@ def sakura_reviews_js():
     window.addEventListener('popstate', injectReviews);
     
 })();
-""", 200, {'Content-Type': 'application/javascript'}
+"""
+    
+    # Replace placeholder with actual base URL
+    formatted_js = js_code.replace('__WIDGET_BASE_URL__', Config.WIDGET_BASE_URL)
+    
+    return formatted_js, 200, {'Content-Type': 'application/javascript'}
 
 @app.route('/shopify/scripttag/create', methods=['POST'])
 def create_scripttag():
