@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  sakura-reviews:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - WIDGET_BASE_URL=https://your-domain.com
+      - WIDGET_SECRET=your-secret-key
+    restart: unless-stopped

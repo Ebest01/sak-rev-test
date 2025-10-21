@@ -1,45 +1,42 @@
-# Sakura Reviews - AI-Powered Review Importer
+# 🌸 Sakura Reviews - ScriptTag API Implementation
 
-🌸 Beautiful reviews, naturally. Import high-quality reviews from AliExpress to Shopify with AI-powered filtering - better than Loox!
+Superior review widget system that crushes Loox with automatic Shopify integration.
 
-## Features
+## 🚀 Features
 
-- ✅ 100 reviews loaded at once
-- ✅ Smart filters (Photos, AI Recommended, Star ratings)
-- ✅ 3-star filter for balanced review sets
-- ✅ Server-side scraping (AliExpress official API)
-- ✅ AI quality scoring
-- ✅ Beautiful gradient UI
-- ✅ Instant client-side filtering
+- **ScriptTag API Integration** - Automatic JavaScript injection like Loox
+- **Multi-platform Support** - AliExpress, Amazon, eBay, Walmart
+- **AI Quality Scoring** - Superior to Loox
+- **Iframe-based Widgets** - Full control and payment management
+- **Zero Manual Work** - Completely automatic installation
 
-## Deployment
+## 📋 Quick Start
 
-### EasyPanel/Railway/Render
+1. **Deploy to EasyPanel**
+2. **Update WIDGET_BASE_URL** in environment variables
+3. **Test ScriptTag endpoints**
 
-```bash
-pip install -r requirements.txt
-python app_loox_inspired.py
-```
+## 🔧 Endpoints
 
-### Environment Variables
+- `/js/sakura-reviews.js` - JavaScript file for ScriptTag injection
+- `/shopify/scripttag/create` - Create ScriptTag via Shopify API
+- `/widget/<shop_id>/reviews/<product_id>` - Review widget
+- `/app-blocks` - Shopify app blocks
 
-- `PORT` - Server port (default: 5000)
+## 🎯 How It Works
 
-## Development
+1. **Merchant installs app** → ScriptTag created automatically
+2. **JavaScript injected** → Loads on all pages
+3. **Product detection** → Automatically finds product pages
+4. **Review injection** → Reviews appear automatically
 
-```bash
-# Install dependencies
-pip install -r requirements.txt
+## 🌟 Superior to Loox
 
-# Run server
-python app_loox_inspired.py
-```
+- Multi-platform support (Loox only has AliExpress)
+- AI quality scoring (Loox doesn't have this)
+- Better pricing and features
+- More customization options
 
-## API Endpoints
+## 📞 Support
 
-- `GET /bookmarklet.js` - Bookmarklet script
-- `GET /api/scrape?productId=xxx` - Scrape reviews from AliExpress
-
-## License
-
-Proprietary - All Rights Reserved
+For deployment issues or questions, contact the development team.

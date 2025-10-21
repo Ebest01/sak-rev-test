@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sakura Reviews Widget</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            color: #1a202c;
+        }
+        
+        .sakura-widget {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        
+        .widget-header {
+            background: linear-gradient(135deg, #ff69b4, #8b4a8b);
+            color: white;
+            padding: 24px;
+            text-align: center;
+        }
+        
+        .widget-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .widget-subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .reviews-stats {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            margin-top: 20px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        .reviews-container {
+            padding: 24px;
+        }
+        
+        .review-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            background: white;
+            transition: all 0.2s ease;
+        }
+        
+        .review-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .review-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .reviewer-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff69b4, #8b4a8b);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .reviewer-info {
+            flex: 1;
+        }
+        
+        .reviewer-name {
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .review-date {
+            font-size: 14px;
+            color: #718096;
+        }
+        
+        .review-rating {
+            display: flex;
+            gap: 2px;
+        }
+        
+        .star {
+            color: #ffd700;
+            font-size: 16px;
+        }
+        
+        .review-text {
+            color: #4a5568;
+            line-height: 1.6;
+            margin: 12px 0;
+        }
+        
+        .review-meta {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-top: 12px;
+        }
+        
+        .meta-badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .verified {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .ai-recommended {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .quality-score {
+            background: #ed8936;
+            color: white;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #e53e3e;
+        }
+        
+        @media (max-width: 768px) {
+            .reviews-stats {
+                flex-direction: column;
+                gap: 16px;
+            }
+            
+            .review-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sakura-widget">
+        <div class="widget-header">
+            <h1 class="widget-title">🌸 Sakura Reviews</h1>
+            <p class="widget-subtitle">Beautiful reviews, naturally. Powered by AI.</p>
+            
+            <div class="reviews-stats">
+                <div class="stat-item">
+                    <span class="stat-number">{{ reviews|length }}</span>
+                    <span class="stat-label">Reviews</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">4.8</span>
+                    <span class="stat-label">Average Rating</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">95%</span>
+                    <span class="stat-label">AI Recommended</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="reviews-container">
+            {% if reviews %}
+                {% for review in reviews %}
+                <div class="review-card">
+                    <div class="review-header">
+                        <div class="reviewer-avatar">
+                            {{ review.author[0] if review.author else 'C' }}
+                        </div>
+                        <div class="reviewer-info">
+                            <div class="reviewer-name">{{ review.author or 'Anonymous' }}</div>
+                            <div class="review-date">{{ review.date }}</div>
+                        </div>
+                        <div class="review-rating">
+                            {% for i in range(review.rating) %}
+                                <span class="star">★</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="review-text">
+                        {{ review.text }}
+                    </div>
+                    
+                    <div class="review-meta">
+                        {% if review.verified %}
+                        <span class="meta-badge verified">✓ Verified</span>
+                        {% endif %}
+                        
+                        {% if review.ai_score > 8 %}
+                        <span class="meta-badge ai-recommended">🤖 AI Recommended</span>
+                        {% endif %}
+                        
+                        <span class="meta-badge quality-score">Quality: {{ review.ai_score }}/10</span>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="loading">
+                    <p>Loading reviews...</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <script>
+        // Auto-resize iframe
+        function resizeIframe() {
+            const height = document.body.scrollHeight;
+            window.parent.postMessage({
+                type: 'resize',
+                height: height
+            }, '*');
+        }
+        
+        // Resize on load and when content changes
+        window.addEventListener('load', resizeIframe);
+        window.addEventListener('resize', resizeIframe);
+        
+        // Track widget views
+        fetch('/widget/{{ shop_id }}/reviews/{{ product_id }}/analytics', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                event: 'widget_view',
+                shop_id: '{{ shop_id }}',
+                product_id: '{{ product_id }}',
+                timestamp: new Date().toISOString()
+            })
+        }).catch(console.error);
+    </script>
+</body>
+</html>

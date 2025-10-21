@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sakura Reviews - Upgrade Required</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .upgrade-container {
+            text-align: center;
+            max-width: 500px;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .sakura-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        
+        .upgrade-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+        
+        .upgrade-subtitle {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 32px;
+            line-height: 1.6;
+        }
+        
+        .features-list {
+            text-align: left;
+            margin: 32px 0;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+        
+        .feature-icon {
+            color: #48bb78;
+            font-size: 20px;
+        }
+        
+        .upgrade-button {
+            background: white;
+            color: #667eea;
+            padding: 16px 32px;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+        }
+        
+        .upgrade-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+        
+        .pricing-info {
+            margin-top: 24px;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="upgrade-container">
+        <div class="sakura-icon">🌸</div>
+        <h1 class="upgrade-title">Upgrade to Sakura Reviews</h1>
+        <p class="upgrade-subtitle">
+            Unlock the full power of AI-powered reviews and multi-platform integration
+        </p>
+        
+        <div class="features-list">
+            <div class="feature-item">
+                <span class="feature-icon">🤖</span>
+                <span>AI Quality Scoring & Recommendations</span>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">🌍</span>
+                <span>Multi-Platform Reviews (AliExpress, Amazon, eBay)</span>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">📊</span>
+                <span>Advanced Analytics Dashboard</span>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">🎨</span>
+                <span>Customizable Themes & Branding</span>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">⚡</span>
+                <span>Real-time Sync & Updates</span>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">💰</span>
+                <span>50% Cheaper than Loox</span>
+            </div>
+        </div>
+        
+        <a href="{{ upgrade_url }}" class="upgrade-button">
+            Upgrade Now - Starting at $9/month
+        </a>
+        
+        <div class="pricing-info">
+            Cancel anytime • 14-day free trial • No setup fees
+        </div>
+    </div>
+    
+    <script>
+        // Track upgrade prompt views
+        fetch('/analytics/upgrade-prompt', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                event: 'upgrade_prompt_view',
+                shop_id: '{{ shop_id }}',
+                timestamp: new Date().toISOString()
+            })
+        }).catch(console.error);
+    </script>
+</body>
+</html>
